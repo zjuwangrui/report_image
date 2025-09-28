@@ -1,0 +1,26 @@
+Full data table:
+ exp_id  v1 (cm/s)  v2 (cm/s)  a (cm/s²)  v̄ (cm/s)  f (dyne)
+      1      27.00      26.31      -0.37     26.655  -114.774
+      2      33.38      33.06      -0.22     33.220   -68.244
+      3      37.20      37.06      -0.13     37.130   -40.326
+      4      41.93      41.56      -0.31     41.745   -96.162
+      5      51.30      51.19      -0.11     51.245   -34.122
+      6      63.25      63.20      -0.06     63.225   -18.612
+
+Linear fit result:
+Fit equation: f = 2.232054 * v + -156.240127
+Since we expect f = -kv:
+k = -2.232054 (drag coefficient)
+Correlation coefficient r = 0.781125
+R squared r^2 = 0.610157
+Standard error = 0.892070
+
+Images saved as: output/f_vs_velocity_plot.png, output/f_vs_velocity_plot.pdf, and output/f_vs_velocity_plot.svg
+
+Theoretical analysis:
+According to the model f = -kv:
+Drag coefficient k = -2.232054 dyne·s/cm
+This means that for every 1 cm/s increase in velocity, the drag increases by -2.232054 dyne
+
+Validation of fit quality:
+fair: (r² < 0.8)

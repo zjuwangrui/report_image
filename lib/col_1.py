@@ -1,109 +1,127 @@
+from typing import List, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
 import pandas as pd
+import os
 
-# 设置中文字体支持
-plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei']  
+# Font settings
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
-# 实验数据
-data: dict[str, list[float]] = {
-    '实验编号': [1, 2, 3, 4, 5, 6],
-    'v1 (cm/s)': [27.00, 33.38, 37.2, 41.93, 51.30, 63.25],
-    'v2 (cm/s)': [26.31, 33.06, 37.06, 41.56, 51.19, 63.20],
-    'a (cm/s²)': [-0.37, -0.22, -0.13, -0.31, -0.11, -0.06]
+def add_output(line: str = "") -> None:
+    output_lines.append(line)
+    print(line)
+output_dir: str = input('please input the file name, such as output/')
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+# Experimental data (SI units)
+data: Dict[str, List[float]] = {
+    'exp_id': [1, 2, 3, 4, 5],
+    'v1 (m/s)': [ 0.3338, 0.372, 0.4193, 0.5130, 0.6325],  # cm/s -> m/s
+    'v2 (m/s)': [ 0.3306, 0.3706, 0.4156, 0.5119, 0.6320],  # cm/s -> m/s
+    'a (m/s^2)': [ -0.0006, -0.0011, -0.0013, -0.0022, -0.0031]  # cm/s^2 -> m/s^2
 }
 
-# 创建DataFrame
-df = pd.DataFrame(data)
+# Create DataFrame
+df: pd.DataFrame = pd.DataFrame(data)
 
-# 计算平均速度 v̄ = (v1 + v2) / 2
-df['v̄ (cm/s)'] = (df['v1 (cm/s)'] + df['v2 (cm/s)']) / 2
+# Calculate average velocity (m/s)
+df['v_avg (m/s)'] = (df['v1 (m/s)'] + df['v2 (m/s)']) / 2
 
-# 物体质量 m = 310.2g
-m = 310.2  # g
+# Mass m = 310.2g = 0.3102 kg
+m: float = 0.3102  # kg
 
-# 计算 f = m * a (单位: g·cm/s² = dyne)
-df['f (dyne)'] = m * df['a (cm/s²)']
+# Calculate force f = m * a (unit: Newton)
+df['f (N)'] = m * df['a (m/s^2)']
 
-# 显示完整数据表
-print("完整数据表:")
-print(df.round(3))
-print("\n")
+# Output collection
+output_lines: List[str] = []
 
-# 准备绘图数据
-v_avg = df['v̄ (cm/s)'].values
-f_values = df['f (dyne)'].values
+# Show full data table
+add_output("Full data table (SI units):")
+add_output(df.round(4).to_string(index=False))
+add_output("")
 
-# 线性拟合 f = -kv (即 f = -k * v_avg)
-# 使用最小二乘法拟合
+# Prepare plot data
+v_avg = df['v_avg (m/s)'].values
+f_values = df['f (N)'].values
+
+# Linear fit f = -kv
 slope, intercept, r_value, p_value, std_err = stats.linregress(v_avg, f_values)
 
-print(f"线性拟合结果:")
-print(f"拟合方程: f = {slope:.6f} * v + {intercept:.6f}")
-print(f"由于我们期望 f = -kv 的形式，所以:")
-print(f"k = {-slope:.6f} (阻力系数)")
-print(f"相关系数 r = {r_value:.6f}")
-print(f"相关系数平方 r² = {r_value**2:.6f}")
-print(f"标准误差 = {std_err:.6f}")
-print("\n")
+add_output("Linear fit result:")
+add_output(f"Fit equation: f = {slope:.6f} * v + {intercept:.6f}")
+add_output(f"Since we expect f = -kv:")
+add_output(f"k = {-slope:.6f} (drag coefficient in N·s/m)")
+add_output(f"Correlation coefficient r = {r_value:.6f}")
+add_output(f"R squared r^2 = {r_value**2:.6f}")
+add_output(f"Standard error = {std_err:.6f}")
+add_output("")
 
-# 创建图像
+# Create output directory if not exists
+
+
+# Create plot
 fig, ax = plt.subplots(1, 1, figsize=(10, 8))
 
-# 绘制数据点
-ax.scatter(v_avg, f_values, color='red', s=100, alpha=0.7, 
-           label='实验数据点', zorder=5)
+# Plot data points
+ax.scatter(v_avg, f_values, color='red', s=100, alpha=0.7, label='Data points', zorder=5)
 
-# 绘制拟合直线
-v_fit = np.linspace(min(v_avg), max(v_avg), 100)
+# Plot fit line
+v_fit = np.linspace(float(min(v_avg)), float(max(v_avg)), 100)
 f_fit = slope * v_fit + intercept
-ax.plot(v_fit, f_fit, 'b--', linewidth=2, 
-        label=f'拟合直线: f = {slope:.4f}v + {intercept:.2f}', alpha=0.8)
+ax.plot(v_fit, f_fit, 'b--', linewidth=2, label=fr'Fit: $f = {slope:.4f}v + {intercept:.2f}$', alpha=0.8)
 
-# 为每个数据点添加标签
+# Annotate each data point
 for i, (v, f_val) in enumerate(zip(v_avg, f_values)):
-    ax.annotate(f'实验{i+1}', (v, f_val), 
-                xytext=(5, 5), textcoords='offset points',
-                fontsize=10, alpha=0.8)
+    ax.annotate(f'Exp {i+1}', (v, f_val), xytext=(5, 5), textcoords='offset points', fontsize=10, alpha=0.8)
 
-# 设置图像属性
-ax.set_xlabel('平均速度 v̄ (cm/s)', fontsize=14)
-ax.set_ylabel('阻力 f (dyne)', fontsize=14)
-ax.set_title('阻力 f 与平均速度 v̄ 的线性关系\n' + 
-             f'拟合方程: f = -kv, k = {-slope:.6f}', fontsize=16)
+# Set plot properties
+ax.set_xlabel(r'Average velocity $\bar{v}$ (m/s)', fontsize=14)
+ax.set_ylabel('Drag force f (N)', fontsize=14)
+ax.set_title('Drag force f vs. average velocity $\\bar{v}$' + '\n' + f'Fit: $f = -kv$, $k = {-slope:.6f}$', fontsize=16)
 ax.grid(True, alpha=0.3)
 ax.legend(fontsize=12)
 
-# 设置坐标轴范围，使图像更美观
-ax.set_xlim(20, 70)
-y_min = min(f_values) * 1.2
-y_max = max(f_values) * 1.2
+# Set axis limits for better appearance
+ax.set_xlim(0.2, 0.7)
+y_min = float(min(f_values)) * 1.2
+y_max = float(max(f_values)) * 1.2
 ax.set_ylim(y_min, y_max)
 
-# 添加文本框显示拟合参数
-textstr = f'阻力系数 k = {-slope:.6f}\n相关系数 r² = {r_value**2:.6f}'
+# Add textbox for fit parameters
+textstr = f'Drag coefficient k = {-slope:.6f} N·s/m\nR squared r^2 = {r_value**2:.6f}'
 props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
-ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=12,
-        verticalalignment='top', bbox=props)
+ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=12, verticalalignment='top', bbox=props)
 
-# 保存图像
+img_path_png = os.path.join(output_dir, 'f_vs_velocity_plot.png')
+img_path_pdf = os.path.join(output_dir, 'f_vs_velocity_plot.pdf')
+img_path_svg = os.path.join(output_dir, 'f_vs_velocity_plot.svg')
 plt.tight_layout()
-plt.savefig('../output/f_vs_velocity_plot.png', dpi=300, bbox_inches='tight')
-plt.savefig('../output/f_vs_velocity_plot.pdf', bbox_inches='tight')
+plt.savefig(img_path_png, dpi=300, bbox_inches='tight')
+plt.savefig(img_path_pdf, bbox_inches='tight')
+plt.savefig(img_path_svg, bbox_inches='tight')
+plt.close(fig)
 
-plt.show()
+add_output(f"Images saved as: {img_path_png}, {img_path_pdf}, and {img_path_svg}")
+add_output("")
 
-# 计算理论验证
-print("理论分析:")
-print("根据 f = -kv 模型:")
-print(f"阻力系数 k = {-slope:.6f} dyne·s/cm")
-print(f"这意味着速度每增加 1 cm/s，阻力增加 {-slope:.6f} dyne")
-print("\n验证拟合质量:")
+# Theoretical validation
+add_output("Theoretical analysis:")
+add_output("According to the model f = -kv:")
+add_output(f"Drag coefficient k = {-slope:.6f} N·s/m")
+add_output(f"This means that for every 1 m/s increase in velocity, the drag increases by {-slope:.6f} N")
+add_output("")
+add_output("Fit quality check:")
 if r_value**2 > 0.9:
-    print("拟合质量: 优秀 (r² > 0.9)")
+    add_output("excellent: (r^2 > 0.9)")
 elif r_value**2 > 0.8:
-    print("拟合质量: 良好 (r² > 0.8)")
+    add_output("good: (r^2 > 0.8)")
 else:
-    print("拟合质量: 一般 (r² < 0.8)")
+    add_output("fair: (r^2 < 0.8)")
+
+# Save all output to file
+result_txt_path: str = os.path.join(output_dir, 'result.txt')
+with open(result_txt_path, 'w', encoding='utf-8') as f:
+    f.write('\n'.join(output_lines))
