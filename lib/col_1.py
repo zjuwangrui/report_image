@@ -13,6 +13,7 @@ def add_output(line: str = "") -> None:
     output_lines.append(line)
     print(line)
 output_dir: str = input('please input the file name, such as output/')
+output_dir = 'output/' + output_dir
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 # Experimental data (SI units)
@@ -53,7 +54,7 @@ slope, intercept, r_value, p_value, std_err = stats.linregress(v_avg, f_values)
 add_output("Linear fit result:")
 add_output(f"Fit equation: f = {slope:.6f} * v + {intercept:.6f}")
 add_output(f"Since we expect f = -kv:")
-add_output(f"k = {-slope:.6f} (drag coefficient in N·s/m)")
+add_output(f"k = {-slope:.4f} (drag coefficient in N·s/m)")
 add_output(f"Correlation coefficient r = {r_value:.6f}")
 add_output(f"R squared r^2 = {r_value**2:.6f}")
 add_output(f"Standard error = {std_err:.6f}")
@@ -80,7 +81,7 @@ for i, (v, f_val) in enumerate(zip(v_avg, f_values)):
 # Set plot properties
 ax.set_xlabel(r'Average velocity $\bar{v}$ (m/s)', fontsize=14)
 ax.set_ylabel('Drag force f (N)', fontsize=14)
-ax.set_title('Drag force f vs. average velocity $\\bar{v}$' + '\n' + f'Fit: $f = -kv$, $k = {-slope:.6f}$', fontsize=16)
+ax.set_title('Drag force f vs. average velocity $\\bar{v}$' + '\n' + f'Fit: $f = -kv$, $k = {-slope:.4f}$', fontsize=16)
 ax.grid(True, alpha=0.3)
 ax.legend(fontsize=12)
 
@@ -91,7 +92,7 @@ y_max = float(max(f_values)) * 1.2
 ax.set_ylim(y_min, y_max)
 
 # Add textbox for fit parameters
-textstr = f'Drag coefficient k = {-slope:.6f} N·s/m\nR squared r^2 = {r_value**2:.6f}'
+textstr = f'Drag coefficient k = {-slope:.4f} N·s/m\nR squared r^2 = {r_value**2:.6f}'
 props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
 ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=12, verticalalignment='top', bbox=props)
 
@@ -110,7 +111,7 @@ add_output("")
 # Theoretical validation
 add_output("Theoretical analysis:")
 add_output("According to the model f = -kv:")
-add_output(f"Drag coefficient k = {-slope:.6f} N·s/m")
+add_output(f"Drag coefficient k = {-slope:.4f} N·s/m")
 add_output(f"This means that for every 1 m/s increase in velocity, the drag increases by {-slope:.6f} N")
 add_output("")
 add_output("Fit quality check:")
