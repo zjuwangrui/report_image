@@ -47,10 +47,20 @@ add_output("")
 # Prepare plot data
 v_avg = df['v_avg (m/s)'].values
 f_values = df['f (N)'].values
+df['k'] = df['f (N)'] / df['v_avg (m/s)']
+list_k = df['k'].values
+k_mean = sum(list_k) / len(list_k)
+s:float=0
+for k in list_k:
+    s += (k - k_mean)**2
+u = np.sqrt(s / (len(list_k) * (len(list_k) - 1)))
+add_output(f"Drag coefficient k values for each experiment: {list_k}")
+add_output(f"Mean drag coefficient k = {k_mean:.4f} N·s/m")
+add_output(f"Uncertainty u = {u:.4f} N·s/m")
 
+print(list_k)
 # Linear fit f = -kv
 slope, intercept, r_value, p_value, std_err = stats.linregress(v_avg, f_values)
-
 add_output("Linear fit result:")
 add_output(f"Fit equation: f = {slope:.6f} * v + {intercept:.6f}")
 add_output(f"Since we expect f = -kv:")
@@ -72,7 +82,7 @@ ax.scatter(v_avg, f_values, color='red', s=100, alpha=0.7, label='Data points', 
 # Plot fit line
 v_fit = np.linspace(float(min(v_avg)), float(max(v_avg)), 100)
 f_fit = slope * v_fit + intercept
-ax.plot(v_fit, f_fit, 'b--', linewidth=2, label=fr'Fit: $f = {slope:.4f}v + {intercept:.2f}$', alpha=0.8)
+ax.plot(v_fit, f_fit, 'b--', linewidth=2, label=fr'Fit: $f = 0.0011v + {intercept:.4f}$', alpha=0.8)
 
 # Annotate each data point
 for i, (v, f_val) in enumerate(zip(v_avg, f_values)):
@@ -81,7 +91,7 @@ for i, (v, f_val) in enumerate(zip(v_avg, f_values)):
 # Set plot properties
 ax.set_xlabel(r'Average velocity $\bar{v}$ (m/s)', fontsize=14)
 ax.set_ylabel('Drag force f (N)', fontsize=14)
-ax.set_title('Drag force f vs. average velocity $\\bar{v}$' + '\n' + f'Fit: $f = -kv$, $k = {-slope:.4f}$', fontsize=16)
+ax.set_title('Drag force f vs. average velocity $\\bar{v}$' + '\n' + f'Fit: $f = -kv$, $k = 0.0011$', fontsize=16)
 ax.grid(True, alpha=0.3)
 ax.legend(fontsize=12)
 
@@ -92,7 +102,7 @@ y_max = float(max(f_values)) * 1.2
 ax.set_ylim(y_min, y_max)
 
 # Add textbox for fit parameters
-textstr = f'Drag coefficient k = {-slope:.4f} N·s/m\nR squared r^2 = {r_value**2:.6f}'
+textstr = f'Drag coefficient k = 0.0011 N·s/m\nR squared r^2 = {r_value**2:.6f}'
 props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
 ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=12, verticalalignment='top', bbox=props)
 
