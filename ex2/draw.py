@@ -1,139 +1,174 @@
-# 拟合阻力系数k
-from typing import List, Dict
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy import stats
 import pandas as pd
-import os
+import numpy as np
+from scipy.interpolate import CubicSpline
+from scipy.signal import find_peaks
+import matplotlib.pyplot as plt
+from pathlib import Path
+from typing import Tuple, List
 
-# Font settings
-plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
-plt.rcParams['axes.unicode_minus'] = False
+def simple_logger(message: str, level: str = "INFO") -> None:
+    """一个简单的打印函数，用于调试。"""
+    print(f"[{level}] {message}")
 
-def add_output(line: str = "") -> None:
-    output_lines.append(line)
-    print(line)
-output_dir: str = input('please input the file name, such as output/')
-output_dir = 'output/' + output_dir
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-# Experimental data (SI units)
-data: Dict[str, List[float]] = {
-    'exp_id': [1, 2, 3, 4, 5],
-    'v1 (m/s)': [ 0.3338, 0.372, 0.4193, 0.5130, 0.6325],  # cm/s -> m/s
-    'v2 (m/s)': [ 0.3306, 0.3706, 0.4156, 0.5119, 0.6320],  # cm/s -> m/s
-    'a (m/s^2)': [ -0.0006, -0.0011, -0.0013, -0.0022, -0.0031]  # cm/s^2 -> m/s^2
-}
+def load_data(file_path: Path) -> pd.DataFrame | None:
+    """从CSV文件加载数据并进行预处理。"""
+    if not file_path.exists():
+        simple_logger(f"输入文件不存在: {file_path}", "ERROR")
+        return None
+    
+    simple_logger(f"正在从 {file_path} 读取数据...")
+    df = pd.read_csv(file_path)
+    
+    # 标准化列名
+    df.columns = ['U', 'I']
+    simple_logger(f"数据加载成功，共 {len(df)} 行。")
+    return df
 
-# Create DataFrame
-df: pd.DataFrame = pd.DataFrame(data)
+def analyze_and_plot(df: pd.DataFrame, output_path_prefix: str) -> Tuple[List[float], float, float] | None:
+    """
+    分析数据、绘制图像、寻找峰值并计算激发电势。
 
-# Calculate average velocity (m/s)
-df['v_avg (m/s)'] = (df['v1 (m/s)'] + df['v2 (m/s)']) / 2
+    Args:
+        df (pd.DataFrame): 包含 U 和 I 列的数据。
+        output_path_prefix (str): 输出文件（图像和文本）的前缀。
 
-# Mass m = 310.2g = 0.3102 kg
-m: float = 0.3102  # kg
+    Returns:
+        A tuple containing (peak_voltages, mean_potential, uncertainty) or None if fails.
+    """
+    U = df['U'].values
+    I = df['I'].values
 
-# Calculate force f = m * a (unit: Newton)
-df['f (N)'] = m * df['a (m/s^2)']
+    # 1. 数据平滑：使用三次样条插值
+    simple_logger("使用三次样条插值平滑数据...")
+    cs = CubicSpline(U, I)
+    U_smooth = np.linspace(U.min(), U.max(), 2000)
+    I_smooth = cs(U_smooth)
 
-# Output collection
-output_lines: List[str] = []
+    # 2. 寻找峰值
+    # prominence: 峰值的突出程度, height: 峰值的最小高度
+    simple_logger("正在寻找电流峰值...")
+    peaks_indices, _ = find_peaks(I_smooth, prominence=50, height=560)
+    peak_voltages = U_smooth[peaks_indices]
+    peak_currents = I_smooth[peaks_indices]
+    
+    if len(peak_voltages) < 2:
+        simple_logger("找到的峰值少于2个，无法进行计算。", "ERROR")
+        return None
+        
+    simple_logger(f"找到 {len(peak_voltages)} 个峰值，电压分别为: {[f'{v:.2f}' for v in peak_voltages]}")
 
-# Show full data table
-add_output("Full data table (SI units):")
-add_output(df.round(4).to_string(index=False))
-add_output("")
+    # 3. 绘制图像并设置交互功能
+    simple_logger("正在绘制可交互的 I-U 曲线图...")
+    fig, ax = plt.subplots(figsize=(12, 8))
 
-# Prepare plot data
-v_avg = df['v_avg (m/s)'].values
-f_values = df['f (N)'].values
-df['k'] = df['f (N)'] / df['v_avg (m/s)']
-list_k = df['k'].values
-k_mean = sum(list_k) / len(list_k)
-s:float=0
-for k in list_k:
-    s += (k - k_mean)**2
-u = np.sqrt(s / (len(list_k) * (len(list_k) - 1)))
-add_output(f"Drag coefficient k values for each experiment: {list_k}")
-add_output(f"Mean drag coefficient k = {k_mean:.4f} N·s/m")
-add_output(f"Uncertainty u = {u:.4f} N·s/m")
+    ax.plot(U_smooth, I_smooth, label='Smoothed I-U Curve', color='blue', zorder=1)
+    ax.scatter(U, I, color='gray', s=15, label='Raw Data Points', zorder=2)
+    ax.scatter(peak_voltages, peak_currents, color='red', s=50, zorder=3, label=f'Detected Peaks ({len(peak_voltages)})')
 
-print(list_k)
-# Linear fit f = -kv
-slope, intercept, r_value, p_value, std_err = stats.linregress(v_avg, f_values)
-add_output("Linear fit result:")
-add_output(f"Fit equation: f = {slope:.6f} * v + {intercept:.6f}")
-add_output(f"Since we expect f = -kv:")
-add_output(f"k = {-slope:.4f} (drag coefficient in N·s/m)")
-add_output(f"Correlation coefficient r = {r_value:.6f}")
-add_output(f"R squared r^2 = {r_value**2:.6f}")
-add_output(f"Standard error = {std_err:.6f}")
-add_output("")
+    # 在图上标记峰值电压
+    for i, (v, c) in enumerate(zip(peak_voltages, peak_currents)):
+        ax.text(v, c + 15, f'{v:.2f}V', ha='center', va='bottom', fontsize=9)
 
-# Create output directory if not exists
+    ax.set_title('Franck-Hertz Experiment: $I_A - U_{G2K}$ Curve')
+    ax.set_xlabel('$U_{G2K}$ (V)')
+    ax.set_ylabel('$I_A$ (nA)')
+    ax.grid(True, linestyle='--', alpha=0.6)
+    ax.legend()
+
+    # --- 添加交互式坐标显示功能 ---
+    annot = ax.annotate("", xy=(0,0), xytext=(20,20), textcoords="offset points",
+                        bbox=dict(boxstyle="round", fc="w"),
+                        arrowprops=dict(arrowstyle="->"))
+    annot.set_visible(False)
+
+    def update_annot(event):
+        if event.inaxes == ax:
+            x, y = event.xdata, event.ydata
+            annot.xy = (x, y)
+            text = f"U={x:.2f}, I={y:.2f}"
+            annot.set_text(text)
+            annot.get_bbox_patch().set_alpha(0.4)
+            annot.set_visible(True)
+            fig.canvas.draw_idle()
+        else:
+            if annot.get_visible():
+                annot.set_visible(False)
+                fig.canvas.draw_idle()
+
+    fig.canvas.mpl_connect("motion_notify_event", update_annot)
+    # --------------------------------
+
+    # 保存图像
+    img_output_path = Path(f"{output_path_prefix}_plot.png")
+    img_output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(img_output_path)
+    simple_logger(f"图像已保存至: {img_output_path}")
+    
+    # 显示交互式窗口
+    plt.show()
+    plt.close()
+
+    # 4. 计算第一激发电势 (逐差法)
+    simple_logger("使用逐差法计算第一激发电势...")
+    diffs = np.diff(peak_voltages)
+    mean_potential = np.mean(diffs)
+    
+    # 计算A类不确定度 (标准差)
+    if len(diffs) > 1:
+        uncertainty = np.std(diffs, ddof=1) / np.sqrt(len(diffs))
+    else:
+        uncertainty = np.nan # 如果只有一个差值，无法计算标准差
+
+    simple_logger(f"计算完成: 平均激发电势 = {mean_potential:.2f} V, 不确定度 = {uncertainty:.2f} V")
+    
+    return peak_voltages.tolist(), mean_potential, uncertainty
+
+def save_results(output_path: Path, peak_voltages: List[float], mean_potential: float, uncertainty: float) -> None:
+    """将结果保存到文本文件并打印到终端。"""
+    
+    output_content = (
+        "弗兰克-赫兹实验数据分析报告\n"
+        "=================================\n"
+        f"找到的峰值数量: {len(peak_voltages)}\n"
+        f"各峰值电压 (V): {[f'{v:.2f}' for v in peak_voltages]}\n"
+        "---------------------------------\n"
+        "逐差法计算结果:\n"
+        f"  - 平均第一激发电势: {mean_potential:.2f} V\n"
+        f"  - A类不确定度: {uncertainty:.2f} V\n"
+        "=================================\n"
+        f"最终结果: U = ({mean_potential:.2f} ± {uncertainty:.2f}) V\n"
+    )
+    
+    # 打印到终端
+    print("\n" + "="*40)
+    print("分析结果")
+    print("="*40)
+    print(output_content)
+    
+    # 保存到文件
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(output_content)
+    simple_logger(f"分析报告已保存至: {output_path}")
 
 
-# Create plot
-fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+def main() -> None:
+    """主函数，协调整个流程。"""
+    file_basename = input("请输入要分析的CSV文件的基本名称（例如, 对于 'raw.csv'，请输入 'raw'）: ")
+    
+    input_path = Path(f'd:/report_image/ex2/output/data/non_auto/raw.csv')
+    output_prefix = f'd:/report_image/ex2/output/image/{file_basename}'
+    
+    df = load_data(input_path)
+    if df is None:
+        return
 
-# Plot data points
-ax.scatter(v_avg, f_values, color='red', s=100, alpha=0.7, label='Data points', zorder=5)
+    analysis_result = analyze_and_plot(df, output_prefix)
+    
+    if analysis_result:
+        peak_voltages, mean_potential, uncertainty = analysis_result
+        record_output_path = Path(f"{output_prefix}_record.txt")
+        save_results(record_output_path, peak_voltages, mean_potential, uncertainty)
 
-# Plot fit line
-v_fit = np.linspace(float(min(v_avg)), float(max(v_avg)), 100)
-f_fit = slope * v_fit + intercept
-ax.plot(v_fit, f_fit, 'b--', linewidth=2, label=fr'Fit: $f = 0.0011v + {intercept:.4f}$', alpha=0.8)
-
-# Annotate each data point
-for i, (v, f_val) in enumerate(zip(v_avg, f_values)):
-    ax.annotate(f'Exp {i+1}', (v, f_val), xytext=(5, 5), textcoords='offset points', fontsize=10, alpha=0.8)
-
-# Set plot properties
-ax.set_xlabel(r'Average velocity $\bar{v}$ (m/s)', fontsize=14)
-ax.set_ylabel('Drag force f (N)', fontsize=14)
-ax.set_title('Drag force f vs. average velocity $\\bar{v}$' + '\n' + f'Fit: $f = -kv$, $k = 0.0011$', fontsize=16)
-ax.grid(True, alpha=0.3)
-ax.legend(fontsize=12)
-
-# Set axis limits for better appearance
-ax.set_xlim(0.2, 0.7)
-y_min = float(min(f_values)) * 1.2
-y_max = float(max(f_values)) * 1.2
-ax.set_ylim(y_min, y_max)
-
-# Add textbox for fit parameters
-textstr = f'Drag coefficient k = 0.0011 N·s/m\nR squared r^2 = {r_value**2:.6f}'
-props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
-ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=12, verticalalignment='top', bbox=props)
-
-img_path_png = os.path.join(output_dir, 'f_vs_velocity_plot.png')
-img_path_pdf = os.path.join(output_dir, 'f_vs_velocity_plot.pdf')
-img_path_svg = os.path.join(output_dir, 'f_vs_velocity_plot.svg')
-plt.tight_layout()
-plt.savefig(img_path_png, dpi=300, bbox_inches='tight')
-plt.savefig(img_path_pdf, bbox_inches='tight')
-plt.savefig(img_path_svg, bbox_inches='tight')
-plt.close(fig)
-
-add_output(f"Images saved as: {img_path_png}, {img_path_pdf}, and {img_path_svg}")
-add_output("")
-
-# Theoretical validation
-add_output("Theoretical analysis:")
-add_output("According to the model f = -kv:")
-add_output(f"Drag coefficient k = {-slope:.4f} N·s/m")
-add_output(f"This means that for every 1 m/s increase in velocity, the drag increases by {-slope:.6f} N")
-add_output("")
-add_output("Fit quality check:")
-if r_value**2 > 0.9:
-    add_output("excellent: (r^2 > 0.9)")
-elif r_value**2 > 0.8:
-    add_output("good: (r^2 > 0.8)")
-else:
-    add_output("fair: (r^2 < 0.8)")
-
-# Save all output to file
-result_txt_path: str = os.path.join(output_dir, 'result.txt')
-with open(result_txt_path, 'w', encoding='utf-8') as f:
-    f.write('\n'.join(output_lines))
+if __name__ == "__main__":
+    main()
