@@ -1,0 +1,16 @@
+Franck Photoelectric measurement report
+====================================
+Number of points: 5
+Slope k = h/e = 4.021754064003717e-15 V·s
+Intercept (y) = -1.44488823150864 V
+X-intercept (ν where Ua=0): 359268172174166.2 Hz
+Corresponding wavelength: 834.4531500960973 nm
+Calculated Planck constant h = 6.443560389041296e-34 J·s
+Correlation r = 0.999127317831757, slope std_err = 9.706939579828346e-17
+====================================
+Data (wavelength_nm, frequency_Hz, Ua_V):
+365.0, 821349200000000.0, 1.885
+405.0, 740228291358024.6, 1.501
+436.0, 687597380733944.9, 1.312
+546.0, 549070435897435.9, 0.772
+577.0, 519570984402079.7, 0.649
