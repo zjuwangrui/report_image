@@ -85,3 +85,35 @@ matplotlib
 要求计算拟合图像的拟合效果R^2 (保留两位小数)
 输入数据的计算结果R^2和关键脚本进行过程、日志输出在ex3\output\phiI_image 文件名{date}+output.txt，date通过input()函数输入
 注意代码风格函数化，方便修改计算参数；增加严格的类型批注；增加简单的打印系统方便调试
+
+# ex4 
+王瑞+3240101517+用霍尔法测直流圆线圈与亥姆霍兹线圈磁场+周三3，4，5节
+
+## single.py
+脚本需要实现绘制单个载流原线圈的轴线上B-x图像。
+实验过程中将单个载流圆线圈放置在测量位置，调节电流并记录不同位置的磁感应强度。
+电流值为0.4A，匝数400，线圈半径10cm。实验原始数据(输入的input.csv)中S表示测量位置的读数，线圈位于s=15cm处。
+x表示绘制磁场分布的图像的x坐标值，也就是该点的s-15。B的计算公式是B正和B负绝对值的平均值。
+理论值应采用单个圆线圈轴线上磁感应强度的标准表达式（多匝乘以 N）：
+B(x) = $\displaystyle \frac{\mu_0 N I R^2}{2\,(x^2+R^2)^{3/2}}$。
+相对误差是 B的测量值(B_avg)和理论值之差 与B的理论值(B_ideal) 的比。
+输入文件的文件地址为：ex4\output\single\data\input.csv 和各列名称：order,S(cm),x(cm),B_+(mT),B_-(mT),B_avg(mT),B_ideal(mT),相对误差
+输出的计算结果，写入文件 ex4\output\single\data\output.csv 文件名：{date}+output.csv，将输入文件中没有计算的各列计算并写入文件。
+简单输出脚本运行报告，记录关键进程。文件地址:ex4\output\single\data\output.txt
+输出图片的路径 ex4\output\single\image 文件名{date}+output.png  date变量通过input函数输入
+图片图例标题使用英文，同时显示理论图像和测量的B-x图像。
+注意代码风格函数化，方便修改计算参数；增加严格的类型批注；增加简单的打印系统方便调试
+## double.py
+脚本需要实现绘制亥姆霍兹线圈的轴线上B-x图像。
+实验过程中将亥姆霍兹线圈放置在测量位置，调节电流并记录不同位置的磁感应强度。
+电流值为0.4A，匝数400，线圈半径10cm。实验原始数据(输入的input.csv)中S表示测量位置的读数，两个线圈的中心位于s=15cm处，线圈1位于s=10cm，线圈二位于s=20cm处。
+x表示绘制磁场分布的图像的x坐标值，也就是该点的s-15。B_avg的计算公式是B正和B负绝对值的平均值。
+输入文件的文件地址为：ex4\output\double\data\input.csv 和各列名称：order,S(cm),x(cm),B_+(mT),B_-(mT),B_avg(mT)
+输出的计算结果，写入文件 ex4\output\double\data\output.csv 文件名：{date}+output.csv，将输入文件中没有计算的列B_avg(mT)计算并写入文件。
+同时计算亥姆霍兹线圈在原点x=0处的理论磁感应强度值，计算相对误差。
+简单输出脚本运行报告，记录关键进程和B_0计算值、相对误差。文件地址:ex4\output\single\data\output.txt
+拟合B-x图像，并输出，图像的路径 ex4\output\double\image 文件名{date}+output.png  date变量通过input函数输入
+图片图例标题使用英文
+注意代码风格函数化，方便修改计算参数；增加严格的类型批注；增加简单的打印系统方便调试
+# ex5
+王瑞+3240101517+密里根油滴实验+周三三四五节 10.29

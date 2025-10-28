@@ -1,0 +1,26 @@
+Analysis Report for Helmholtz Coil: 10241350
+==================================================
+Parameters Used:
+  - Current (I): 0.4 A
+  - Turns per coil (N): 400
+  - Radius (R): 10.0 cm
+==================================================
+Center Point (x=0) Analysis:
+  - Measured Magnetic Field at Center: 1.437 mT
+  - Theoretical Magnetic Field (B₀): 1.439 mT
+  - Relative Error: 0.15%
+==================================================
+Log Trace:
+[INFO] Starting analysis for identifier: 10241350
+[INFO] Looking for data at d:\report_image\ex4\output\double\data\input.csv...
+[INFO] Data loaded successfully.
+[INFO] Calculating B_avg and x positions...
+[INFO] B_avg and x calculations complete.
+[INFO] Calculating theoretical center field and relative error...
+[INFO] Measured B at center: 1.4365 mT
+[INFO] Theoretical B at center (B₀): 1.4387 mT
+[INFO] Relative Error at center: 0.15%
+[INFO] Saving processed data to d:\report_image\ex4\output\double\data\10241350+output.csv...
+[INFO] Processed data saved.
+[INFO] Generating and saving B-x plot...
+[INFO] Saving report to d:\report_image\ex4\output\double\data\10241350+output.txt...
