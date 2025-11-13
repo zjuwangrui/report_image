@@ -24,5 +24,7 @@ npm-debug.log*
 node_modules/
 vendor/
 
-.ssh
-.ssh.pub
+/.ssh
+/.ssh.pub
+/.ssh/config
+/.env
