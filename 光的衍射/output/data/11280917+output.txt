@@ -1,0 +1,9 @@
+Analysis Report for Single-Slit Diffraction: 11280917
+======================================================
+Key Findings:
+  - Central Maximum Photocurrent: 1326.30 x 10^-8 A
+  - First-Order Maximum Photocurrent (Avg): 69.65 x 10^-8 A
+======================================================
+Log Trace:
+[INFO] Starting analysis for identifier: 11280917
+[INFO] Saving report to 光的衍射\output\data\11280917+output.txt...
