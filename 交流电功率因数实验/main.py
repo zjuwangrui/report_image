@@ -10,65 +10,81 @@ def simple_logger(message: str, level: str = "INFO") -> None:
 
 def load_or_create_data(file_path: Path) -> Optional[pd.DataFrame]:
     """Loads data from CSV or creates a dummy file if it doesn't exist."""
+
     try:
         df = pd.read_csv(file_path)
         simple_logger("Data loaded successfully.")
+        # Ensure data is numeric
+        for col in ['C(\\mu F)', 'I(mA)', 'U(V)', 'P(W)']:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
         return df
     except Exception as e:
         simple_logger(f"Failed to read data file: {e}", "ERROR")
         return None
 
+
 def calculate_power_factor(df: pd.DataFrame) -> pd.DataFrame:
     """Calculates the power factor and fills the corresponding column."""
     simple_logger("Calculating power factor cos(phi)...")
     
-    # Calculate cos(phi) = P / (U * I)
-    # Use .get() for safer column access
-    P = df.get('P\\W')
-    U = df.get('U\\V')
-    I = df.get('I\\A')
+    P = df.get('P(W)')
+    U = df.get('U(V)')
+    I_mA = df.get('I(mA)')
     
-    if P is None or U is None or I is None:
-        raise KeyError("One or more required columns ('P\\W', 'U\\V', 'I\\A') are missing.")
+    if P is None or U is None or I_mA is None:
+        raise KeyError("One or more required columns ('P(W)', 'U(V)', 'I(mA)') are missing.")
         
-    # Avoid division by zero
-    apparent_power = U * I
-    df['\\cos \\phi'] = np.where(apparent_power > 0, P / apparent_power, 0)
+    # --- FIX: Convert current from mA to A before calculation ---
+    I_A = I_mA / 1000.0
     
-    # Round to 4 decimal places
-    df['\\cos \\phi'] = df['\\cos \\phi'].round(4)
+    apparent_power = U * I_A
     
+    # Use np.divide for safe division
+    cos_phi = np.divide(P, apparent_power, out=np.zeros_like(P, dtype=float), where=apparent_power!=0)
+    
+    df['\\cos \\phi'] = np.round(cos_phi, 2)
+    df['P(W)'] = np.round(P, 1)
+    df['U(V)'] = np.round(U, 1)
+    df['I(mA)'] = np.round(I_mA, 1)
     simple_logger("Power factor calculation complete.")
     return df
 
 def plot_and_fit_graph(df: pd.DataFrame, output_path: Path) -> None:
-    """Generates and saves the cos(phi) vs. C plot with a polynomial fit."""
+    """Generates and saves the cos(phi) vs. C plot using a polynomial fit."""
     C = df['C(\\mu F)']
     cos_phi = df['\\cos \\phi']
     
-    # Perform a 2nd degree polynomial fit: y = ax^2 + bx + c
-    fit_params = np.polyfit(C, cos_phi, 2)
+    # --- CHANGE: Use 2nd degree polynomial fit ---
+    fit_params = np.polyfit(C, cos_phi, 4)
     poly_func = np.poly1d(fit_params)
     
-    simple_logger(f"Polynomial fit (2nd degree) complete. Parameters: a={fit_params[0]}, b={fit_params[1]}, c={fit_params[2]}")
-    
+    simple_logger(f"Polynomial fit (3rd degree) complete. Parameters: a={fit_params[0]:.4g}, b={fit_params[1]:.4g}, c={fit_params[2]:.4g},d={fit_params[3]:.4g}")
+
+    # Calculate R-squared for goodness of fit
+    residuals = cos_phi - poly_func(C)
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((cos_phi - np.mean(cos_phi))**2)
+    r_squared = 1 - (ss_res / ss_tot)
+    simple_logger(f"R-squared for the polynomial fit: {r_squared:.4f}")
+
     fig, ax = plt.subplots(figsize=(10, 7))
     
     # Plot measured data points
     ax.scatter(C, cos_phi, label='Measured Data', color='blue', zorder=5)
     
-    # Create data for the fitted line
+    # Plot the fitted curve
     C_fit = np.linspace(C.min(), C.max(), 200)
     cos_phi_fit = poly_func(C_fit)
     
-    # Create equation string with 4 significant figures for parameters
-    eq_str = (f'Fit: $y = {fit_params[0]:.4g}x^2 + {fit_params[1]:.4g}x + {fit_params[2]:.4g}$')
-    
-    # Plot the fitted line
+    # Create equation string for the legend
+    eq_str = (f'Fit: $y = {fit_params[0]:.4g}x^3 + {fit_params[1]:.4g}x^2 + {fit_params[2]:.4g}x + {fit_params[3]:.4g}$')
     ax.plot(C_fit, cos_phi_fit, 'r--', label=eq_str, linewidth=2)
     
+    title_str = f'Power Factor vs. Capacitance ($R^2 = {r_squared:.4f}$)'
+
     # --- Formatting ---
-    ax.set_title('Power Factor vs. Capacitance')
+    ax.set_title(title_str)
     ax.set_xlabel('Capacitance C (μF)')
     ax.set_ylabel('Power Factor $\\cos(\\phi)$')
     ax.grid(True)
@@ -101,9 +117,11 @@ def main():
             raise ValueError("Failed to load or create data. Aborting.")
         
         df_processed = calculate_power_factor(df.copy())
-        
+        df_processed['U(V)'] = df_processed['U(V)'].round(1)
+        df_processed['I(mA)'] = df_processed['I(mA)'].round(1)
+        df_processed['P(W)'] = df_processed['P(W)'].round(1)
         # --- Save Processed Data ---
-        df_processed.to_csv(output_csv, index=False, float_format='%.4f')
+        df_processed.to_csv(output_csv, index=False)
         simple_logger(f"Processed data saved to {output_csv}")
         
         # --- Generate Plot ---

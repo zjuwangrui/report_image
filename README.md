@@ -156,7 +156,7 @@ x表示绘制磁场分布的图像的x坐标值，也就是该点的s-15。B_avg
 # 交流电功率因数实验
 
 写一个脚本实现： 本实验测量不同电容下的电压、电流，功率，计算交流功率因数，并绘制交流功率因素-电容图像。
-输入文件的文件地址为：交流电功率因数实验\output\data\input.csv 和各列名称：C(\mu F),I\A,U\V,P\W,\cos \phi
+输入文件的文件地址为：交流电功率因数实验\output\data\input.csv 和各列名称：C(\mu F),I(mA),U(V),P(W),\cos \phi
 你需要计算\cos \phi并输出一个新的csv文件，将这一列数据补上，其他数据保持不变。
 输出的计算结果，保留四位位数，其他各列数据不变和输入相同，写入文件 交流电功率因数实验\output\data\output.csv 文件名：{date}+output.csv
 输出图像的路径 交流电功率因数实验\output\image 文件名{date}+output.png  date变量通过input函数输入
