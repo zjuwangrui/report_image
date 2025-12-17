@@ -36,14 +36,14 @@ def analyze_data(df: pd.DataFrame) -> Tuple[float, np.ndarray, float]:
         - r_squared (float): The R-squared value of the fit.
     """
     t = df['t(°C)']
-    rt = df['R_t(Ω)']
+    rt = df['R_t(\\times 10^{-3}Ω)']/1000.0
     
     # Perform linear regression using scipy.stats.linregress
     slope, intercept, r_value,_, _ = linregress(t, rt)
     
     # The slope k corresponds to R0 * alpha
     slope_k = slope
-    
+    R0 = intercept  # Intercept should be close to R0
     # Calculate alpha
     alpha = slope_k / R0
     
@@ -72,7 +72,7 @@ def plot_graph(df: pd.DataFrame, alpha: float, fit_params: np.ndarray, r_squared
         output_path (Path): The path to save the image file.
     """
     t = df['t(°C)']
-    rt = df['R_t(Ω)']
+    rt = df['R_t(\\times 10^{-3}Ω)']/1000.0
     
     fig, ax = plt.subplots(figsize=(10, 7))
     
